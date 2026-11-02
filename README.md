@@ -125,6 +125,24 @@ total            18      18                             0
 I wrote that corpus together with the rules, so it guards against regressions and says nothing
 about accuracy on code I have not seen.
 
+For a check on someone else's code, I ran it over all 93 Python files of
+[pytorch/examples](https://github.com/pytorch/examples) at commit `acc295d` and read every
+finding:
+
+```console
+git clone https://github.com/pytorch/examples && cd examples
+git checkout acc295dc7b90714f1bf47f06004fc19a7fe235c4
+trainlint check .
+```
+
+It reports 21 findings. By my reading, 19 are real: 15 scripts never set a seed (one declares a
+`--seed` option and never uses it), 3 tensor-parallel scripts never clear gradients, and one script
+resumes from a snapshot without saving optimizer state. Two more are correct as written but
+harmless, because those models have no dropout or batch norm to leave in training mode. The first
+run also flagged three distributed-autograd scripts for missing `zero_grad()`, which was a false
+positive that is now fixed. This is one repository of tutorial code and I did the reviewing, so
+treat it as a spot check. It tells you nothing about what the rules miss.
+
 ## Development
 
 ```console
