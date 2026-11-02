@@ -26,6 +26,9 @@ def build_parser() -> argparse.ArgumentParser:
     check.add_argument("--select", metavar="RULES", help="comma-separated rule ids to run")
     check.add_argument("--ignore", metavar="RULES", help="comma-separated rule ids to skip")
     check.add_argument("--format", choices=("text", "json"), default="text")
+    check.add_argument(
+        "--color", choices=("auto", "always", "never"), default="auto", help="default: auto"
+    )
     check.add_argument("--exit-zero", action="store_true", help="exit 0 even if problems are found")
     check.set_defaults(run=_check)
 
@@ -76,7 +79,7 @@ def _check(args: argparse.Namespace) -> int:
     if args.format == "json":
         print(render_json(report))
     else:
-        print(render_text(report, color=_use_color()))
+        print(render_text(report, color=_use_color(args.color)))
     return 1 if report.findings and not args.exit_zero else 0
 
 
@@ -96,7 +99,9 @@ def _install_skills(args: argparse.Namespace) -> int:
     return 0
 
 
-def _use_color() -> bool:
+def _use_color(mode: str) -> bool:
+    if mode != "auto":
+        return mode == "always"
     if "NO_COLOR" in os.environ or not sys.stdout.isatty():
         return False
     return os.name != "nt" or _enable_windows_ansi()

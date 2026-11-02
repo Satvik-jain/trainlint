@@ -41,6 +41,16 @@ def test_json_output(tmp_path: Path, capsys):
     assert [(f["rule"], f["line"], f["column"]) for f in payload["findings"]] == [("TL002", 1, 1)]
 
 
+def test_color_always_emits_ansi_and_never_does_not(tmp_path: Path, capsys):
+    path = write(tmp_path, "scaler.fit(X_test)\n")
+
+    main(["check", "--color", "always", path])
+    assert "\x1b[" in capsys.readouterr().out
+
+    main(["check", "--color", "never", path])
+    assert "\x1b[" not in capsys.readouterr().out
+
+
 def test_select_filters_rules(tmp_path: Path):
     path = write(tmp_path, "scaler.fit(X_test)\n")
     assert main(["check", "--select", "TL001", path]) == 0
