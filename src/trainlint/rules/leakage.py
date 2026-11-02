@@ -9,13 +9,13 @@ from collections.abc import Iterator
 from trainlint.astutil import (
     by_position,
     call_tail,
+    call_targets,
     calls_in,
     is_eval_name,
     is_train_name,
     receiver,
     root_name,
     scopes,
-    target_names,
     walk_scope,
 )
 from trainlint.rules.base import Hit, Rule
@@ -34,20 +34,11 @@ def _describe(call: ast.Call) -> str:
     return f"{ast.unparse(call.func)}(...)"
 
 
-def _outputs(nodes: list[ast.AST]) -> dict[int, set[str]]:
-    """Names each call's result is assigned to, keyed by id(call)."""
-    bound: dict[int, set[str]] = {}
-    for node in nodes:
-        if isinstance(node, ast.Assign) and isinstance(node.value, ast.Call):
-            bound[id(node.value)] = {n for t in node.targets for n in target_names(t)}
-    return bound
-
-
 def _fit_before_split(tree: ast.Module) -> Iterator[Hit]:
     for scope in scopes(tree):
         nodes = list(walk_scope(scope))
         calls = calls_in(nodes)
-        bound = _outputs(nodes)
+        bound = call_targets(nodes)
         fits = list(_full_data_fits(calls, bound))
         for index, (fit, data, produced) in enumerate(fits):
             tainted = {data, *produced}

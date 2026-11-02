@@ -61,6 +61,15 @@ def target_names(target: ast.AST) -> list[str]:
     return []
 
 
+def call_targets(nodes: Iterable[ast.AST]) -> dict[int, set[str]]:
+    """Names each call's result is assigned to, keyed by id(call)."""
+    bound: dict[int, set[str]] = {}
+    for node in nodes:
+        if isinstance(node, ast.Assign) and isinstance(node.value, ast.Call):
+            bound[id(node.value)] = {n for t in node.targets for n in target_names(t)}
+    return bound
+
+
 def kwarg(call: ast.Call, name: str) -> ast.expr | None:
     for keyword in call.keywords:
         if keyword.arg == name:
