@@ -3,9 +3,9 @@
 Agent skills and an offline checker for ML bugs that do not crash.
 
 [![ci](https://github.com/Satvik-jain/trainlint/actions/workflows/ci.yml/badge.svg)](https://github.com/Satvik-jain/trainlint/actions/workflows/ci.yml)
-[![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/Satvik-jain/trainlint/blob/main/LICENSE)
 
-![Cross-validated accuracy on random labels: 85% with a leak, trainlint pointing at it, 48% after the fix](assets/demo.gif)
+![Cross-validated accuracy on random labels: 85% with a leak, trainlint pointing at it, 48% after the fix](https://raw.githubusercontent.com/Satvik-jain/trainlint/main/assets/demo.gif)
 
 The 5,000 features and the labels are random, so no model can beat 50%. Picking features before
 cross-validating reports 85%. The GIF is rendered from the real output of the commands shown;
@@ -62,7 +62,7 @@ the first place.
 ## What it does
 
 - Twelve rules, TL001 to TL012, listed below and explained with examples in
-  [docs/rules.md](docs/rules.md).
+  [docs/rules.md](https://github.com/Satvik-jain/trainlint/blob/main/docs/rules.md).
 - Each finding shows the line, a pointer into the code, and a one-line fix.
 - Pure standard library. It parses the code and never runs it.
 - Text or JSON output, rule selection, and per-line ignore comments.
@@ -167,7 +167,7 @@ are small and have a clear definition of done.
 ## Contributing
 
 False positives and missed bugs are the most useful reports. See
-[CONTRIBUTING.md](CONTRIBUTING.md) for setup and for how to add a rule.
+[CONTRIBUTING.md](https://github.com/Satvik-jain/trainlint/blob/main/CONTRIBUTING.md) for setup and for how to add a rule.
 
 ```console
 uv sync
