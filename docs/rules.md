@@ -248,3 +248,21 @@ val_loader = DataLoader(val_ds, batch_size=64, drop_last=True)
 ```python
 val_loader = DataLoader(val_ds, batch_size=64, drop_last=False)
 ```
+
+## TL013: data rescaled with its own statistics before the split
+
+Scaling a dataset by its own mean, std, min or max before splitting it uses every row to pick the
+scale. The validation and test rows then shape the training input, as with a scaler fitted on all
+rows. The rule needs the rescaled name to be the one whose statistics it uses, and a split call
+after it on the result.
+
+```python
+df = (df - df.mean()) / df.std()
+X_train, X_test = train_test_split(df)
+```
+
+```python
+X_train, X_test = train_test_split(df)
+mean, std = X_train.mean(), X_train.std()
+X_train, X_test = (X_train - mean) / std, (X_test - mean) / std
+```
