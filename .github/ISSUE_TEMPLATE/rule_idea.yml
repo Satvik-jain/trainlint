@@ -1,0 +1,27 @@
+name: Rule idea
+description: A bug that trainlint should catch
+labels: ["new rule"]
+body:
+  - type: textarea
+    id: bug
+    attributes:
+      label: The bug
+      description: What goes wrong, and how you would notice it (or not).
+    validations:
+      required: true
+  - type: textarea
+    id: example
+    attributes:
+      label: Minimal example
+      render: python
+    validations:
+      required: true
+  - type: textarea
+    id: signal
+    attributes:
+      label: What in the code gives it away
+      description: |
+        Rules work on one file's syntax tree, with no type information. Name the calls, names or
+        ordering a check could look at, and a sensible script that looks similar but is fine.
+    validations:
+      required: true

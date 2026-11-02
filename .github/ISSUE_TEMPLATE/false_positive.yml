@@ -1,0 +1,30 @@
+name: False positive
+description: trainlint flagged code that is correct
+labels: ["false positive"]
+body:
+  - type: input
+    id: rule
+    attributes:
+      label: Rule
+      placeholder: TL001
+    validations:
+      required: true
+  - type: textarea
+    id: snippet
+    attributes:
+      label: Smallest snippet that is flagged
+      render: python
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why this code is correct
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Output of `trainlint --version`
+    validations:
+      required: true
