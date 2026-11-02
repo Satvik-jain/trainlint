@@ -242,6 +242,18 @@ def test_gradients_never_cleared(lint):
     assert [f.line for f in findings] == [5]
 
 
+def test_distributed_autograd_needs_no_zero_grad(lint):
+    assert not lint(
+        """
+        import torch
+        with dist_autograd.context() as context_id:
+            dist_autograd.backward(context_id, [loss])
+            opt.step(context_id)
+        """,
+        "TL009",
+    )
+
+
 @pytest.mark.parametrize(
     "order",
     [

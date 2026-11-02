@@ -205,7 +205,13 @@ def _gradients_never_cleared(tree: ast.Module) -> Iterator[Hit]:
     if not _imports_torch(tree) or _clears_gradients(tree):
         return
     calls = all_calls(tree)
-    backward = [c for c in calls if _is_method_call(c, "backward")]
+    # Distributed autograd keeps gradients per context, so there is nothing to clear.
+    backward = [
+        c
+        for c in calls
+        if _is_method_call(c, "backward")
+        and not (receiver(c) or "").endswith(("dist_autograd", "distributed.autograd"))
+    ]
     if backward and any(_is_method_call(c, "step") for c in calls):
         yield Hit(
             backward[0],
