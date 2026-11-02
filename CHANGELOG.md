@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.1 - 2026-11-03
+
+- README links and the demo image are absolute, so they work on the PyPI page.
+
 ## 0.1.0 - 2026-11-03
 
 First release.
