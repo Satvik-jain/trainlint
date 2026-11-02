@@ -2,24 +2,14 @@
 
 Agent skills and an offline checker for ML bugs that do not crash.
 
-Cross-validated accuracy on 5,000 random features and random labels, where no model can beat 50%:
+[![ci](https://github.com/Satvik-jain/trainlint/actions/workflows/ci.yml/badge.svg)](https://github.com/Satvik-jain/trainlint/actions/workflows/ci.yml)
+[![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-```console
-$ uv run examples/noise_leak.py
-cross-validated accuracy on random labels: 85%
+![Cross-validated accuracy on random labels: 85% with a leak, trainlint pointing at it, 48% after the fix](assets/demo.gif)
 
-$ uvx trainlint check examples/noise_leak.py
-examples/noise_leak.py:19:5: TL001 `SelectKBest(f_classif, k=20).fit_transform(...)` runs on all rows before `cross_val_score()` splits them, so validation and test rows shape the transform
-   |
-19 | X = SelectKBest(f_classif, k=20).fit_transform(X, y)
-   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-   = help: Split first and fit on the training part only, or put the step in a Pipeline so cross-validation refits it on each fold.
-
-Found 1 problem in 1 file (checked 1 file).
-
-$ uv run examples/noise_leak_fixed.py
-cross-validated accuracy on random labels: 48%
-```
+The 5,000 features and the labels are random, so no model can beat 50%. Picking features before
+cross-validating reports 85%. The GIF is rendered from the real output of the commands shown;
+`assets/make_assets.py` rebuilds it.
 
 ## Install
 
@@ -33,26 +23,51 @@ dependencies, and never touches the network or a GPU.
 ## Quickstart
 
 ```console
-trainlint check train.py            # one file
-trainlint check src/ --ignore TL005 # a folder, skipping a rule
-trainlint check . --format json     # for scripts and CI
-trainlint rules                     # list every rule
+uvx trainlint check train.py     # find the bugs in a script, a folder, or a repo
+uvx trainlint skills install     # teach your coding agent to avoid them
 ```
 
-Exit code 0 means no findings, 1 means findings, 2 means a usage error. Silence a finding on one
-line with a comment:
+`skills install` copies four skills into `./.claude/skills`. Use `--agent agents` for
+`./.agents/skills`, `--global` for your user folder, or `--dest DIR` for any other place.
+
+More ways to run the checker:
+
+```console
+trainlint check src/ --ignore TL005   # skip a rule
+trainlint check . --format json       # for scripts and CI
+trainlint rules                       # list every rule
+```
+
+Exit code 0 means no findings, 1 means findings, 2 means a usage error. To silence a finding on
+one line:
 
 ```python
 scaler.fit(X_all)  # trainlint: ignore[TL002] fitting on the pooled set is intended here
 ```
 
-To run it in GitHub Actions:
+In GitHub Actions:
 
 ```yaml
 - run: uvx trainlint check .
 ```
 
-## What it checks
+## Why it exists
+
+ML code fails quietly. A scaler fitted before the split, a model left in eval mode, or a softmax
+in front of `CrossEntropyLoss` still trains and still prints a number. Coding agents and people
+both write these mistakes, and general linters do not know what the code is for. trainlint is a
+small offline checker for the common cases, plus skills that tell an agent how to avoid them in
+the first place.
+
+## What it does
+
+- Twelve rules, TL001 to TL012, listed below and explained with examples in
+  [docs/rules.md](docs/rules.md).
+- Each finding shows the line, a pointer into the code, and a one-line fix.
+- Pure standard library. It parses the code and never runs it.
+- Text or JSON output, rule selection, and per-line ignore comments.
+- Four [Agent Skills](https://agentskills.io/specification) that cover the same ground and run
+  the checker when it is installed.
 
 | Rule | Flags |
 | --- | --- |
@@ -69,29 +84,12 @@ To run it in GitHub Actions:
 | TL011 | `y_true` and `y_pred` swapped, or class labels passed to `roc_auc_score` |
 | TL012 | Validation or test `DataLoader` with `drop_last=True` |
 
-Each finding prints the line, a pointer to the code, and a one-line fix.
-
-## Agent skills
-
-Coding agents write most of these bugs without noticing. The package ships four skills in the
-[Agent Skills](https://agentskills.io/specification) format that tell the agent what to do
-instead and to run the checker afterwards:
-
 | Skill | Covers |
 | --- | --- |
 | `ml-data-leakage` | Splits, pipelines, grouped and time-ordered data, resampling, the test set |
 | `ml-training-loop` | Modes, gradient order, loss inputs, shapes, seeds, mixed precision |
 | `ml-metrics-eval` | Argument order, scores versus labels, averaging, imbalance, variance |
 | `ml-checkpoint-resume` | What a checkpoint must hold, best versus last, verifying a resume |
-
-```console
-trainlint skills install                  # into ./.claude/skills
-trainlint skills install --agent agents   # into ./.agents/skills
-trainlint skills install --global         # into your user folder instead
-trainlint skills install --dest some/dir  # anywhere else
-```
-
-The skills work without the checker installed. They only use it when it is there.
 
 ## How far to trust it
 
@@ -143,7 +141,33 @@ run also flagged three distributed-autograd scripts for missing `zero_grad()`, w
 positive that is now fixed. This is one repository of tutorial code and I did the reviewing, so
 treat it as a spot check. It tells you nothing about what the rules miss.
 
-## Development
+## Compared with other tools
+
+| Tool | What it covers | Where trainlint differs |
+| --- | --- | --- |
+| ruff, pylint, flake8 | General Python style and bugs | None of their rules know about splits, eval mode or metrics. Use them alongside trainlint. |
+| [TorchFix](https://github.com/meta-pytorch/torchfix) | Removed and deprecated PyTorch functions, `requires_grad` typos, unsafe `torch.load` | Its README lists no rules for training logic. trainlint does not check API deprecations. |
+| [mllint](https://github.com/bvobart/mllint) | Repository-level quality of ML projects: version control, dependencies, code quality | It looks at project hygiene. trainlint reads training and evaluation code. |
+| [Deepchecks](https://github.com/deepchecks/deepchecks) | Checks that run on real datasets and models, including drift | Deepchecks needs your data and model loaded. trainlint reads source only and runs nothing. |
+| General skill collections | Engineering process for coding agents | They are not specific to ML. trainlint's skills target training and evaluation code and come with a checker. |
+
+## Roadmap
+
+- Jupyter notebook support
+- SARIF output for GitHub code scanning
+- Settings in `pyproject.toml`
+- More rules: training loaders without shuffling, `retain_graph` in a loop, normalization on a
+  whole DataFrame before the split
+- A benchmark that measures how often an agent writes these bugs with and without the skills
+  (needs an API key, so it will be optional)
+
+Issues labeled [good first issue](https://github.com/Satvik-jain/trainlint/labels/good%20first%20issue)
+are small and have a clear definition of done.
+
+## Contributing
+
+False positives and missed bugs are the most useful reports. See
+[CONTRIBUTING.md](CONTRIBUTING.md) for setup and for how to add a rule.
 
 ```console
 uv sync
@@ -155,3 +179,5 @@ uv run python -m bench
 ## License
 
 MIT
+
+If trainlint saved you an afternoon, a star on the repository helps other people find it.
