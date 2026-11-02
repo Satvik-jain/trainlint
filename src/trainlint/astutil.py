@@ -69,7 +69,9 @@ def kwarg(call: ast.Call, name: str) -> ast.expr | None:
 
 
 def is_const(node: ast.AST | None, value: object) -> bool:
-    return isinstance(node, ast.Constant) and node.value is value
+    return (
+        isinstance(node, ast.Constant) and type(node.value) is type(value) and node.value == value
+    )
 
 
 def is_train_name(name: str) -> bool:
