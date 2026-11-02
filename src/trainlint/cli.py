@@ -10,6 +10,7 @@ from trainlint import __version__
 from trainlint.engine import lint_paths, select_rules
 from trainlint.report import render_json, render_text
 from trainlint.rules import ALL_RULES
+from trainlint.skills_install import AGENT_DIRS, default_destination, install
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -30,6 +31,24 @@ def build_parser() -> argparse.ArgumentParser:
 
     rules = commands.add_parser("rules", help="list the available rules")
     rules.set_defaults(run=_rules)
+
+    skills = commands.add_parser("skills", help="manage the bundled agent skills")
+    skill_commands = skills.add_subparsers(dest="skills_command", required=True)
+    install = skill_commands.add_parser(
+        "install", help="copy the skills into a project or user skills folder"
+    )
+    install.add_argument(
+        "--agent",
+        choices=sorted(AGENT_DIRS),
+        default="claude",
+        help="which agent's skills folder to use (default: claude)",
+    )
+    install.add_argument(
+        "--global", dest="user_wide", action="store_true", help="install for the current user"
+    )
+    install.add_argument("--dest", type=Path, help="install into this folder instead")
+    install.add_argument("--force", action="store_true", help="overwrite skills already there")
+    install.set_defaults(run=_install_skills)
     return parser
 
 
@@ -64,6 +83,16 @@ def _check(args: argparse.Namespace) -> int:
 def _rules(_: argparse.Namespace) -> int:
     for rule in ALL_RULES:
         print(f"{rule.id}  {rule.title}")
+    return 0
+
+
+def _install_skills(args: argparse.Namespace) -> int:
+    destination = args.dest or default_destination(args.agent, args.user_wide)
+    installed, skipped = install(destination, force=args.force)
+    for path in installed:
+        print(f"installed {path}")
+    for path in skipped:
+        print(f"skipped {path} (already exists, use --force to replace)")
     return 0
 
 
