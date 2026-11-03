@@ -118,7 +118,8 @@ TL009             2       2                             0
 TL010             1       1                             0
 TL011             2       2                             0
 TL012             1       1                             0
-total            18      18                             0
+TL013             1       1                             0
+total            19      19                             0
 ```
 
 I wrote that corpus together with the rules, so it guards against regressions and says nothing

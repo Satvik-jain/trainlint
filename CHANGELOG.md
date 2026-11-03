@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- TL013 flags data rescaled with its own mean, std, min or max before a split (thanks to
+  @jay23606). Per-row statistics such as `axis=1` are not flagged.
+
 ## 0.1.1 - 2026-11-03
 
 - README links and the demo image are absolute, so they work on the PyPI page.
