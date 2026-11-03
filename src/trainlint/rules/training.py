@@ -1,4 +1,4 @@
-"""TL003, TL004, TL005, TL008, TL009 and TL010: mistakes inside the training loop."""
+"""TL003, TL004, TL005, TL008, TL009, TL010 and TL014: mistakes inside the training loop."""
 
 from __future__ import annotations
 
@@ -9,8 +9,11 @@ from trainlint.astutil import (
     all_calls,
     by_position,
     call_tail,
+    call_targets,
     calls_in,
     is_const,
+    is_eval_name,
+    is_train_name,
     receiver,
     scopes,
     walk_scope,
@@ -18,6 +21,9 @@ from trainlint.astutil import (
 from trainlint.rules.base import Hit, Rule
 
 _LOOPS = (ast.For, ast.While, ast.AsyncFor)
+# DataLoader(dataset, batch_size, shuffle, sampler, ...): the third positional argument is shuffle.
+_ORDER_KEYWORDS = frozenset({"shuffle", "sampler", "batch_sampler"})
+_ORDER_POSITION = 2
 
 
 def _is_method_call(call: ast.Call, name: str) -> bool:
@@ -276,6 +282,30 @@ def _gradient_clearing(tree: ast.Module) -> Iterator[Hit]:
     yield from _zero_grad_between_backward_and_step(tree)
 
 
+def _chooses_batch_order(call: ast.Call) -> bool:
+    # A **kwargs splat may carry shuffle or sampler, so it counts as choosing one.
+    return len(call.args) > _ORDER_POSITION or any(
+        k.arg is None or k.arg in _ORDER_KEYWORDS for k in call.keywords
+    )
+
+
+def _training_loader_never_shuffles(tree: ast.Module) -> Iterator[Hit]:
+    for scope in scopes(tree):
+        nodes = list(walk_scope(scope))
+        bound = call_targets(nodes)
+        for call in calls_in(nodes):
+            if call_tail(call) != "DataLoader" or _chooses_batch_order(call):
+                continue
+            names = bound.get(id(call), set())
+            if any(is_train_name(n) and not is_eval_name(n) for n in names):
+                yield Hit(
+                    call,
+                    "this training DataLoader has no shuffle, sampler or batch_sampler, so every "
+                    "epoch feeds batches in dataset order",
+                    "Pass shuffle=True for training loaders.",
+                )
+
+
 RULES = (
     Rule(
         "TL003",
@@ -298,5 +328,10 @@ RULES = (
     ),
     Rule(
         "TL010", "Loss stored as a tensor, keeping the autograd graph alive", _loss_kept_with_graph
+    ),
+    Rule(
+        "TL014",
+        "Training DataLoader that never shuffles",
+        _training_loader_never_shuffles,
     ),
 )
