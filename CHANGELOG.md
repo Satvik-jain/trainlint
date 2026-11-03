@@ -4,6 +4,8 @@
 
 - TL013 flags data rescaled with its own mean, std, min or max before a split (thanks to
   @jay23606). Per-row statistics such as `axis=1` are not flagged.
+- TL014 flags a training `DataLoader` with no `shuffle`, `sampler` or `batch_sampler`, so batches
+  arrive in dataset order every epoch. Evaluation loaders are not flagged.
 
 ## 0.1.1 - 2026-11-03
 

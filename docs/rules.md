@@ -266,3 +266,18 @@ X_train, X_test = train_test_split(df)
 mean, std = X_train.mean(), X_train.std()
 X_train, X_test = (X_train - mean) / std, (X_test - mean) / std
 ```
+
+## TL014: training DataLoader that never shuffles
+
+Without `shuffle=True`, a training loader feeds batches in dataset order every epoch. Sorted or
+grouped data then gives the model the same sequence of classes or sources each time, which hurts
+training and nothing warns about it. The rule flags a `DataLoader` bound to a training-looking name
+when it gets no `shuffle`, `sampler` or `batch_sampler`. Evaluation loaders are not flagged.
+
+```python
+train_loader = DataLoader(train_ds, batch_size=32)
+```
+
+```python
+train_loader = DataLoader(train_ds, batch_size=32, shuffle=True)
+```

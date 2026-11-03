@@ -320,3 +320,46 @@ def test_detached_loss_is_clean(lint, line):
 
 def test_accumulating_a_non_loss_tensor_is_clean(lint):
     assert not lint("loss.backward()\ncount += batch\n", "TL010")
+
+
+# TL014 -----------------------------------------------------------------------
+
+
+def test_training_loader_without_shuffle(lint):
+    findings = lint(
+        "train_loader = DataLoader(train_ds, batch_size=32)\n",
+        "TL014",
+    )
+    assert [f.line for f in findings] == [1]
+
+
+def test_training_loader_with_positional_shuffle_is_clean(lint):
+    assert not lint("train_loader = DataLoader(train_ds, 32, True)\n", "TL014")
+
+
+@pytest.mark.parametrize(
+    "order",
+    [
+        "shuffle=True",
+        "shuffle=False",
+        "sampler=sampler",
+        "batch_sampler=batch_sampler",
+        "**loader_kwargs",
+    ],
+)
+def test_training_loader_that_chooses_its_order_is_clean(lint, order):
+    assert not lint(f"train_loader = DataLoader(train_ds, {order})\n", "TL014")
+
+
+def test_evaluation_loader_without_shuffle_is_clean(lint):
+    assert not lint(
+        """
+        val_loader = DataLoader(val_ds, batch_size=64)
+        test_loader = DataLoader(test_ds)
+        """,
+        "TL014",
+    )
+
+
+def test_loader_not_bound_to_a_name_is_clean(lint):
+    assert not lint("for x, y in DataLoader(train_ds, batch_size=32):\n    pass\n", "TL014")

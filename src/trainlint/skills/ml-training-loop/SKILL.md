@@ -93,6 +93,7 @@ Divide the loss by the number of accumulation steps, call `backward()` every mic
 
 If `trainlint` is installed, run `trainlint check <file>` after editing. Relevant rules: TL003
 (eval mode left on), TL004 (no_grad without eval), TL005 (no seed), TL006 (mixed precision),
-TL008 (activation before a logits loss), TL009 (gradient clearing), TL010 (loss kept as a tensor).
+TL008 (activation before a logits loss), TL009 (gradient clearing), TL010 (loss kept as a tensor),
+TL014 (training loader that never shuffles).
 Fix each finding, or add `# trainlint: ignore[TL00x]` with a comment saying why it does not apply.
 If it is not installed, apply the points above by hand.
