@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+import re
 from collections.abc import Iterable, Iterator
 
 from trainlint.astutil import (
@@ -14,13 +15,16 @@ from trainlint.astutil import (
     is_const,
     is_eval_name,
     is_train_name,
+    kwarg,
     receiver,
+    root_name,
     scopes,
     walk_scope,
 )
 from trainlint.rules.base import Hit, Rule
 
 _LOOPS = (ast.For, ast.While, ast.AsyncFor)
+_STREAM_NAME = re.compile(r"iter|stream", re.IGNORECASE)
 # DataLoader(dataset, batch_size, shuffle, sampler, ...): the third positional argument is shuffle.
 _ORDER_KEYWORDS = frozenset({"shuffle", "sampler", "batch_sampler"})
 _ORDER_POSITION = 2
@@ -289,12 +293,22 @@ def _chooses_batch_order(call: ast.Call) -> bool:
     )
 
 
+def _streams_data(call: ast.Call) -> bool:
+    # Iterable-style datasets cannot be shuffled by the loader, so a dataset argument named
+    # like an iterator or stream is left alone.
+    first = call.args[0] if call.args else kwarg(call, "dataset")
+    name = root_name(first) if first is not None else None
+    return name is not None and _STREAM_NAME.search(name) is not None
+
+
 def _training_loader_never_shuffles(tree: ast.Module) -> Iterator[Hit]:
     for scope in scopes(tree):
         nodes = list(walk_scope(scope))
         bound = call_targets(nodes)
         for call in calls_in(nodes):
             if call_tail(call) != "DataLoader" or _chooses_batch_order(call):
+                continue
+            if _streams_data(call):
                 continue
             names = bound.get(id(call), set())
             if any(is_train_name(n) and not is_eval_name(n) for n in names):

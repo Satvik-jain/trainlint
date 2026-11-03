@@ -361,5 +361,10 @@ def test_evaluation_loader_without_shuffle_is_clean(lint):
     )
 
 
+@pytest.mark.parametrize("dataset", ["train_iterator", "stream_ds", "IterTrain"])
+def test_training_loader_over_a_stream_is_clean(lint, dataset):
+    assert not lint(f"train_loader = DataLoader({dataset}, batch_size=32)\n", "TL014")
+
+
 def test_loader_not_bound_to_a_name_is_clean(lint):
     assert not lint("for x, y in DataLoader(train_ds, batch_size=32):\n    pass\n", "TL014")
