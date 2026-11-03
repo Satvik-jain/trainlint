@@ -61,7 +61,7 @@ the first place.
 
 ## What it does
 
-- Twelve rules, TL001 to TL012, listed below and explained with examples in
+- Thirteen rules, TL001 to TL013, listed below and explained with examples in
   [docs/rules.md](https://github.com/Satvik-jain/trainlint/blob/main/docs/rules.md).
 - Each finding shows the line, a pointer into the code, and a one-line fix.
 - Pure standard library. It parses the code and never runs it.
@@ -83,6 +83,7 @@ the first place.
 | TL010 | Loss added to a running total or list as a tensor, keeping every graph alive |
 | TL011 | `y_true` and `y_pred` swapped, or class labels passed to `roc_auc_score` |
 | TL012 | Validation or test `DataLoader` with `drop_last=True` |
+| TL013 | Data rescaled with its own mean, std, min or max before a split |
 
 | Skill | Covers |
 | --- | --- |
@@ -100,7 +101,7 @@ inference and no cross-file analysis, so:
 - A bug whose cause sits in another file is not seen.
 - A heuristic can be wrong. When it is, add an ignore comment and open an issue.
 
-`python -m bench` runs the checker over a corpus of 18 buggy scripts, one or two per rule, each
+`python -m bench` runs the checker over a corpus of 19 buggy scripts, one or two per rule, each
 with a fixed twin:
 
 ```

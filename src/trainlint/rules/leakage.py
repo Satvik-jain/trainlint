@@ -1,4 +1,4 @@
-"""TL001 and TL002: held-out rows influencing the model."""
+"""TL001, TL002 and TL013: held-out rows influencing the model."""
 
 from __future__ import annotations
 
@@ -16,6 +16,7 @@ from trainlint.astutil import (
     receiver,
     root_name,
     scopes,
+    target_names,
     walk_scope,
 )
 from trainlint.rules.base import Hit, Rule
@@ -28,6 +29,8 @@ _SPLITTING_CALLS = frozenset(
 )
 # Encoding labels on the full dataset is routine and leaks nothing the model can use.
 _LABEL_NAME = re.compile(r"^(?:y|labels?|targets?)(?:_|\d|$)", re.IGNORECASE)
+# Statistics that rescale a column by its own range or spread.
+_ROW_STATS = frozenset({"mean", "std", "min", "max"})
 
 
 def _describe(call: ast.Call) -> str:
@@ -109,7 +112,61 @@ def _fit_on_held_out(tree: ast.Module) -> Iterator[Hit]:
             )
 
 
+def _self_scaled(value: ast.expr) -> set[str]:
+    """Names that `value` rescales by their own mean, std, min or max, as in x - x.mean()."""
+    if not isinstance(value, ast.BinOp):
+        return set()
+    stats = [
+        call
+        for call in ast.walk(value)
+        if isinstance(call, ast.Call)
+        and call_tail(call) in _ROW_STATS
+        and isinstance(call.func, ast.Attribute)
+    ]
+    inside_stats = {id(node) for call in stats for node in ast.walk(call)}
+    operands = {
+        node.id
+        for node in ast.walk(value)
+        if isinstance(node, ast.Name) and id(node) not in inside_stats
+    }
+    return {root for call in stats if (root := root_name(call.func.value)) in operands}
+
+
+def _scaled_before_split(tree: ast.Module) -> Iterator[Hit]:
+    for scope in scopes(tree):
+        nodes = list(walk_scope(scope))
+        calls = calls_in(nodes)
+        for assign in by_position(n for n in nodes if isinstance(n, ast.Assign)):
+            if not _self_scaled(assign.value):
+                continue
+            produced = {name for target in assign.targets for name in target_names(target)}
+            splitter = next(
+                (
+                    c
+                    for c in calls
+                    if call_tail(c) in _SPLITTING_CALLS
+                    and by_position([assign, c])[0] is assign
+                    and any(root_name(arg) in produced for arg in c.args)
+                ),
+                None,
+            )
+            if splitter is not None:
+                yield Hit(
+                    assign,
+                    f"`{ast.unparse(assign.targets[0])}` is rescaled with statistics of all "
+                    f"rows before `{call_tail(splitter)}()` splits them, so validation and "
+                    "test rows shape the scale",
+                    "Split first and compute the mean, std, min or max on the training part "
+                    "only, then apply it to each part.",
+                )
+
+
 RULES = (
     Rule("TL001", "Preprocessing is fitted on all rows before the split", _fit_before_split),
     Rule("TL002", "Transform or model is fitted on a validation or test split", _fit_on_held_out),
+    Rule(
+        "TL013",
+        "Data is rescaled with its own statistics before the split",
+        _scaled_before_split,
+    ),
 )

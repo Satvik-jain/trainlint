@@ -68,6 +68,7 @@ at chance. If it scores clearly above chance, something is leaking.
 ## Check the code
 
 If `trainlint` is installed, run `trainlint check <file>` after editing. TL001 flags
-preprocessing fitted before a split and TL002 flags fits on validation or test data. Fix each
+preprocessing fitted before a split, TL002 flags fits on validation or test data and TL013
+flags rescaling by a dataset's own statistics before it is split. Fix each
 finding, or add `# trainlint: ignore[TL001]` with a comment saying why it does not apply. If it is
 not installed, apply the rules above by hand.

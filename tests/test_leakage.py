@@ -133,3 +133,57 @@ def test_fit_on_train_and_transform_on_test_is_clean(lint):
         """,
         "TL002",
     )
+
+
+def test_self_scaling_before_split(lint):
+    findings = lint(
+        """
+        df = (df - df.mean()) / df.std()
+        X_train, X_test = train_test_split(df)
+        """,
+        "TL013",
+    )
+    assert [(f.rule, f.line) for f in findings] == [("TL013", 2)]
+    assert "train_test_split" in findings[0].message
+
+
+def test_self_scaling_into_new_name_before_cv(lint):
+    findings = lint(
+        """
+        Xn = X / X.max()
+        scores = cross_val_score(model, Xn, y)
+        """,
+        "TL013",
+    )
+    assert [f.line for f in findings] == [2]
+
+
+def test_scaling_with_split_first_is_clean(lint):
+    assert not lint(
+        """
+        X_train, X_test = train_test_split(df)
+        X_train = (X_train - X_train.mean()) / X_train.std()
+        X_test = (X_test - X_train.mean()) / X_train.std()
+        """,
+        "TL013",
+    )
+
+
+def test_scaling_without_a_split_is_clean(lint):
+    assert not lint(
+        """
+        df = (df - df.mean()) / df.std()
+        model.fit(df, y)
+        """,
+        "TL013",
+    )
+
+
+def test_stats_of_another_name_are_clean(lint):
+    assert not lint(
+        """
+        scaled = (values - reference.mean()) / reference.std()
+        X_train, X_test = train_test_split(scaled)
+        """,
+        "TL013",
+    )
