@@ -272,7 +272,9 @@ X_train, X_test = (X_train - mean) / std, (X_test - mean) / std
 Without `shuffle=True`, a training loader feeds batches in dataset order every epoch. Sorted or
 grouped data then gives the model the same sequence of classes or sources each time, which hurts
 training and nothing warns about it. The rule flags a `DataLoader` bound to a training-looking name
-when it gets no `shuffle`, `sampler` or `batch_sampler`. Evaluation loaders are not flagged.
+when it gets no `shuffle`, `sampler` or `batch_sampler`. Evaluation loaders are not flagged, and
+neither is a loader whose dataset is named like an iterator or stream, because iterable-style
+datasets cannot be shuffled by the loader.
 
 ```python
 train_loader = DataLoader(train_ds, batch_size=32)

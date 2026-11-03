@@ -61,7 +61,7 @@ the first place.
 
 ## What it does
 
-- Thirteen rules, TL001 to TL013, listed below and explained with examples in
+- Fourteen rules, TL001 to TL014, listed below and explained with examples in
   [docs/rules.md](https://github.com/Satvik-jain/trainlint/blob/main/docs/rules.md).
 - Each finding shows the line, a pointer into the code, and a one-line fix.
 - Pure standard library. It parses the code and never runs it.
@@ -84,6 +84,7 @@ the first place.
 | TL011 | `y_true` and `y_pred` swapped, or class labels passed to `roc_auc_score` |
 | TL012 | Validation or test `DataLoader` with `drop_last=True` |
 | TL013 | Data rescaled with its own mean, std, min or max before a split |
+| TL014 | Training `DataLoader` with no `shuffle`, `sampler` or `batch_sampler` |
 
 | Skill | Covers |
 | --- | --- |
@@ -101,7 +102,7 @@ inference and no cross-file analysis, so:
 - A bug whose cause sits in another file is not seen.
 - A heuristic can be wrong. When it is, add an ignore comment and open an issue.
 
-`python -m bench` runs the checker over a corpus of 19 buggy scripts, one or two per rule, each
+`python -m bench` runs the checker over a corpus of 20 buggy scripts, one or two per rule, each
 with a fixed twin:
 
 ```
@@ -119,7 +120,8 @@ TL010             1       1                             0
 TL011             2       2                             0
 TL012             1       1                             0
 TL013             1       1                             0
-total            19      19                             0
+TL014             1       1                             0
+total            20      20                             0
 ```
 
 I wrote that corpus together with the rules, so it guards against regressions and says nothing
@@ -135,12 +137,13 @@ git checkout acc295dc7b90714f1bf47f06004fc19a7fe235c4
 trainlint check .
 ```
 
-It reports 21 findings. By my reading, 19 are real: 15 scripts never set a seed (one declares a
-`--seed` option and never uses it), 3 tensor-parallel scripts never clear gradients, and one script
-resumes from a snapshot without saving optimizer state. Two more are correct as written but
-harmless, because those models have no dropout or batch norm to leave in training mode. The first
-run also flagged three distributed-autograd scripts for missing `zero_grad()`, which was a false
-positive that is now fixed. This is one repository of tutorial code and I did the reviewing, so
+It reports 22 findings. By my reading, 20 are real: 15 scripts never set a seed (one declares a
+`--seed` option and never uses it), 3 tensor-parallel scripts never clear gradients, one script
+resumes from a snapshot without saving optimizer state, and one trains on a loader that never
+shuffles. Two more are correct as written but harmless, because those models have no dropout or
+batch norm to leave in training mode. Earlier runs also flagged three distributed-autograd scripts
+for missing `zero_grad()` and one torchtext iterator for not shuffling. Both were false positives
+and are now fixed. This is one repository of tutorial code and I did the reviewing, so
 treat it as a spot check. It tells you nothing about what the rules miss.
 
 ## Compared with other tools
@@ -158,8 +161,7 @@ treat it as a spot check. It tells you nothing about what the rules miss.
 - Jupyter notebook support
 - SARIF output for GitHub code scanning
 - Settings in `pyproject.toml`
-- More rules: training loaders without shuffling, `retain_graph` in a loop, normalization on a
-  whole DataFrame before the split
+- More rules: `retain_graph` in a loop
 - A benchmark that measures how often an agent writes these bugs with and without the skills
   (needs an API key, so it will be optional)
 
