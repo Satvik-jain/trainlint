@@ -179,6 +179,17 @@ def test_scaling_without_a_split_is_clean(lint):
     )
 
 
+def test_per_row_statistics_are_clean(lint):
+    assert not lint(
+        """
+        df = df.sub(df.mean(axis=1), axis=0)
+        scaled = (X - X.mean(axis=1)) / X.std(1)
+        X_train, X_test = train_test_split(scaled)
+        """,
+        "TL013",
+    )
+
+
 def test_stats_of_another_name_are_clean(lint):
     assert not lint(
         """

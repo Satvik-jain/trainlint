@@ -11,8 +11,10 @@ from trainlint.astutil import (
     call_tail,
     call_targets,
     calls_in,
+    is_const,
     is_eval_name,
     is_train_name,
+    kwarg,
     receiver,
     root_name,
     scopes,
@@ -112,6 +114,11 @@ def _fit_on_held_out(tree: ast.Module) -> Iterator[Hit]:
             )
 
 
+def _per_row(call: ast.Call) -> bool:
+    """True for x.mean(axis=1), which uses one row's values and leaks nothing across rows."""
+    return is_const(kwarg(call, "axis"), 1) or bool(call.args and is_const(call.args[0], 1))
+
+
 def _self_scaled(value: ast.expr) -> set[str]:
     """Names that `value` rescales by their own mean, std, min or max, as in x - x.mean()."""
     if not isinstance(value, ast.BinOp):
@@ -122,6 +129,7 @@ def _self_scaled(value: ast.expr) -> set[str]:
         if isinstance(call, ast.Call)
         and call_tail(call) in _ROW_STATS
         and isinstance(call.func, ast.Attribute)
+        and not _per_row(call)
     ]
     inside_stats = {id(node) for call in stats for node in ast.walk(call)}
     operands = {
